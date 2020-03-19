@@ -73,7 +73,7 @@ class SubDomainEnumerator:
         try:
             page = HelpUtilities.query_dns_dumpster(host=self.host)
             soup = BeautifulSoup(page.text, "lxml")
-            hosts_table = soup.select(".table")[-1]
+            hosts_table = soup.select(".table")[0]
             for row in hosts_table.find_all("tr"):
                 tds = row.select("td")
                 sub_domain = tds[0].text.split('\n')[0]  # Grab just the URL, truncate other information

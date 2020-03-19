@@ -102,7 +102,7 @@ class WAF:
     def _waf_detected(self, name, where):
         self.logger.info(
             "{} Detected WAF presence in {}: {}{}{}".format(
-                COLORED_COMBOS.BAD, where, COLOR.RED, name, COLOR.RESET))
+                COLORED_COMBOS.NOTIFY, where, COLOR.YELLOW, name, COLOR.RESET))
         self.waf_present = True
 
     def _detect_by_cname(self):

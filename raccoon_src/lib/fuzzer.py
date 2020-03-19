@@ -45,12 +45,12 @@ class URLFuzzer:
 
     def _log_response(self, code, url, headers):
         if 300 > code >= 200:
-            color = COLOR.GREEN
+            color = COLOR.RED
         elif 400 > code >= 300:
-            color = COLOR.BLUE
+            color = COLOR.YELLOW
             url += " redirects to {}".format(headers.get("Location"))
         elif 510 > code >= 400:
-            color = COLOR.RED
+            color = COLOR.YELLOW
         else:
             color = COLOR.RESET
         self.logger.info("\t{}[{}]{} {}".format(

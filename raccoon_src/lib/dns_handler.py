@@ -3,7 +3,7 @@ from asyncio.subprocess import PIPE, create_subprocess_exec
 from requests.exceptions import ConnectionError
 from raccoon_src.utils.help_utils import HelpUtilities
 from raccoon_src.utils.exceptions import RaccoonException
-from raccoon_src.utils.logger import Logger
+from raccoon_src.utils.logger import SystemOutLogger
 from raccoon_src.utils.coloring import COLOR, COLORED_COMBOS
 
 
@@ -40,8 +40,8 @@ class DNSHandler:
             return
 
         script = "whois {}".format(host.naked).split()
-        log_file = HelpUtilities.get_output_path("{}/whois.txt".format(host.target))
-        logger = Logger(log_file)
+        #log_file = HelpUtilities.get_output_path("{}/whois.txt".format(host.target))
+        logger = SystemOutLogger()
 
         process = await create_subprocess_exec(
             *script,
@@ -61,7 +61,7 @@ class DNSHandler:
         sout_logger.info("{} Trying to fetch DNS Mapping for {} from DNS dumpster".format(
             COLORED_COMBOS.INFO, host))
         try:
-            page = HelpUtilities.query_dns_dumpster(host=host)
+            page = HelpUtilities.png_dns_dumpster(host=host)
             if page.status_code == 200:
                 path = HelpUtilities.get_output_path("{}/dns_mapping.png".format(host.target))
                 with open(path, "wb") as target_image:

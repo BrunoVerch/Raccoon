@@ -1,5 +1,6 @@
 import random
 from fake_useragent import UserAgent
+from requests_html import AsyncHTMLSession
 from requests import request, Session, utils as requests_utils
 from requests.exceptions import ProxyError, TooManyRedirects, ConnectionError, ConnectTimeout, ReadTimeout
 from urllib3.exceptions import NewConnectionError
@@ -109,6 +110,12 @@ class RequestHandler(metaclass=Singleton):
     def get_new_session(self):
         """Returns a new session using the object's proxies and headers"""
         session = Session()
+        session.headers = self.headers
+        session.proxies = self._get_request_proxies()
+        return session
+
+    def get_new_html_session(self):
+        session = AsyncHTMLSession()
         session.headers = self.headers
         session.proxies = self._get_request_proxies()
         return session

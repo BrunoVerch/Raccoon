@@ -47,6 +47,19 @@ class HelpUtilities:
                                    "for more info.")
 
     @classmethod
+    def parse_header_arg(cls, headers_arg):
+        try:
+            headers = {}
+            for h in headers_arg.split(','):
+                h = h.split(":")
+                headers[h[0]] = h[1]
+            return headers
+        except (IndexError, TypeError):
+            raise RaccoonException("Header parsing error occurred, probably due to invalid header format.\n"
+                                   "Header format should be comma separated key:value pairs. Use --help "
+                                   "for more info.")
+
+    @classmethod
     def validate_wordlist_args(cls, proxy_list, wordlist, subdomain_list):
         if proxy_list and not os.path.isfile(proxy_list):
             raise FileNotFoundError("Not a valid file path, {}".format(proxy_list))
@@ -132,7 +145,7 @@ class HelpUtilities:
             raise RaccoonException("Tor service seems to be down - not able to connect to 127.0.0.1:9050.\nExiting")
 
     @classmethod
-    def query_dns_dumpster(cls, host):
+    def png_dns_dumpster(cls, host):
         # Start DNS Dumpster session for the token
         request_handler = RequestHandler()
         dnsdumpster_session = request_handler.get_new_session()
@@ -156,6 +169,32 @@ class HelpUtilities:
             dnsdumpster_session.post(url, data=payload, headers={"Referer": "https://dnsdumpster.com/"})
 
             return dnsdumpster_session.get("https://dnsdumpster.com/static/map/{}.png".format(target))
+        except ConnectionError:
+            raise RaccoonException
+
+    @classmethod
+    def query_dns_dumpster(cls, host):
+        # Start DNS Dumpster session for the token
+        request_handler = RequestHandler()
+        dnsdumpster_session = request_handler.get_new_session()
+        url = "https://dnsdumpster.com"
+        if host.naked:
+            target = host.naked
+        else:
+            target = host.target
+        payload = {
+            "targetip": target,
+            "csrfmiddlewaretoken": None
+        }
+        try:
+            dnsdumpster_session.get(url, timeout=10)
+            jar = dnsdumpster_session.cookies
+            for c in jar:
+                if not c.__dict__.get("name") == "csrftoken":
+                    continue
+                payload["csrfmiddlewaretoken"] = c.__dict__.get("value")
+                break
+            return dnsdumpster_session.post(url, data=payload, headers={"Referer": "https://dnsdumpster.com/"})
         except ConnectionError:
             raise RaccoonException
 

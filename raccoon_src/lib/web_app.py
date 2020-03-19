@@ -12,10 +12,11 @@ from raccoon_src.utils.logger import Logger
 
 class WebApplicationScanner:
 
-    def __init__(self, host):
+    def __init__(self, host, request_headers = None):
         self.host = host
         self.request_handler = RequestHandler()
         self.web_server_validator = WebServerValidator()
+        self.request_headers = request_headers
         self.headers = None
         self.robots = None
         self.forms = None
@@ -76,28 +77,24 @@ class WebApplicationScanner:
     def _server_info(self):
         if self.headers.get("server"):
             self.logger.info("{} Web server detected: {}{}{}".format(
-                COLORED_COMBOS.GOOD, COLOR.GREEN, self.headers.get("server"), COLOR.RESET))
+                COLORED_COMBOS.NOTIFY, COLOR.YELLOW, self.headers.get("server"), COLOR.RESET))
 
     def _x_powered_by(self):
         if self.headers.get("X-Powered-By"):
             self.logger.info("{} X-Powered-By header detected: {}{}{}".format(
-                COLORED_COMBOS.GOOD, COLOR.GREEN, self.headers.get("X-Powered-By"), COLOR.RESET))
+                COLORED_COMBOS.BAD, COLOR.RED, self.headers.get("X-Powered-By"), COLOR.RESET))
 
-    def _anti_clickjacking(self):
-        if not self.headers.get("X-Frame-Options"):
+    def _has_header(self, header):
+        if not self.headers.get(header):
             self.logger.info(
-                "{} X-Frame-Options header not detected - target might be vulnerable to clickjacking".format(
-                    COLORED_COMBOS.GOOD)
+                "{} {} header not detected".format(COLORED_COMBOS.BAD, header)
             )
-
-    def _xss_protection(self):
-        xss_header = self.headers.get("X-XSS-PROTECTION")
-        if xss_header and "1" in xss_header:
-            self.logger.info("{} Found X-XSS-PROTECTION header".format(COLORED_COMBOS.BAD))
+        else:
+            self.logger.info("{} Found {} header".format(COLORED_COMBOS.GOOD, header))
 
     def _cors_wildcard(self):
         if self.headers.get("Access-Control-Allow-Origin") == "*":
-            self.logger.info("{} CORS wildcard detected".format(COLORED_COMBOS.GOOD))
+            self.logger.info("{} CORS wildcard detected".format(COLORED_COMBOS.BAD))
 
     def _robots(self):
         res = self.request_handler.send(
@@ -184,17 +181,18 @@ class WebApplicationScanner:
         self.emails.add(href)
 
     async def get_web_application_info(self):
-        session = self.request_handler.get_new_session()
+        session = self.request_handler.get_new_html_session()
         try:
             with session:
                 # Test if target is serving HTTP requests
-                response = session.get(
+                response = await session.get(
                     timeout=20,
                     url="{}://{}:{}".format(
                         self.host.protocol,
                         self.host.target,
                         self.host.port
-                    )
+                    ),
+                    headers = self.request_headers
                 )
                 self.headers = response.headers
                 self._detect_cms()
@@ -203,14 +201,11 @@ class WebApplicationScanner:
                 self._server_info()
                 self._x_powered_by()
                 self._cors_wildcard()
-                self._xss_protection()
-                self._anti_clickjacking()
-                self._cookie_info(session.cookies)
-
-                soup = BeautifulSoup(response.text, "lxml")
-                self._find_urls(soup)
-                self._find_forms(soup)
-                self.storage_explorer.run(soup)
+                self._has_header('X-Frame-Options')
+                self._has_header('Content-Security-Policy')
+                self._has_header('Strict-Transport-Security')
+                self._has_header('X-Content-Type-Options')
+                self._has_header('X-XSS-Protection')
 
         except (ConnectionError, TooManyRedirects) as e:
             raise WebAppScannerException("Couldn't get response from server.\n"
